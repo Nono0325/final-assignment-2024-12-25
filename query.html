@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase with Modules</title>
+</head>
+<body>
+  <h1>儲存資料到 Firebase</h1>
+  <form id="dataForm">
+    <label for="cardNumber">卡號：</label>
+    <input type="text" id="cardNumber" required><br><br>
+    <label for="hasTicket">是否有入場票：</label>
+    <select id="hasTicket" required>
+      <option value="yes">是</option>
+      <option value="no">否</option>
+    </select><br><br>
+    <label for="balance">餘額：</label>
+    <input type="number" id="balance" required><br><br>
+    <button type="submit">儲存</button>
+  </form>
+
+  <h1>新增餘額</h1>
+  <form id="balanceForm">
+    <label for="cardNumberBalance">卡號：</label>
+    <input type="text" id="cardNumberBalance" required><br><br>
+    <label for="addBalance">新增餘額：</label>
+    <input type="number" id="addBalance" required><br><br>
+    <button type="submit">新增</button>
+  </form>
+
+  <h1>查詢餘額</h1>
+  <form id="queryBalanceForm">
+    <label for="cardNumberQuery">卡號：</label>
+    <input type="text" id="cardNumberQuery" required><br><br>
+    <button type="submit">查詢</button>
+  </form>
+  <p id="balanceResult"></p>
+
+  <script type="module">
+    // Import Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+    import { getDatabase, ref, push, set, get, update } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyATKMAYVCRLjOeX0Npj-VcWdEuKQhy0nRg",
+      authDomain: "final-assignment-4f1de.firebaseapp.com",
+      databaseURL: "https://final-assignment-4f1de-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "final-assignment-4f1de",
+      storageBucket: "final-assignment-4f1de.firebasestorage.app",
+      messagingSenderId: "928317934661",
+      appId: "1:928317934661:web:d2dd3a37c8bade1194272c",
+      measurementId: "G-LTTR4ZE1ZQ"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    // Handle Form Submission for Saving Data
+    document.getElementById('dataForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const cardNumber = document.getElementById('cardNumber').value;
+      const hasTicket = document.getElementById('hasTicket').value;
+      const balance = document.getElementById('balance').value;
+
+      // Save data to Firebase
+      const usersRef = ref(database, 'users');
+      const newUserRef = push(usersRef);
+      set(newUserRef, {
+        cardNumber: cardNumber,
+        hasTicket: hasTicket,
+        balance: balance
+      }).then(() => {
+        alert('資料儲存成功！');
+        document.getElementById('dataForm').reset();
+      }).catch((error) => {
+        console.error('資料儲存失敗：', error);
+      });
+    });
+
+    // Handle Form Submission for Adding Balance
+    document.getElementById('balanceForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const cardNumber = document.getElementById('cardNumberBalance').value;
+      const addBalance = parseFloat(document.getElementById('addBalance').value);
+
+      // Get user data from Firebase
+      const usersRef = ref(database, 'users');
+      get(usersRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const users = snapshot.val();
+          let userKey = null;
+          let currentBalance = 0;
+
+          // Find the user by card number
+          for (const key in users) {
+            if (users[key].cardNumber === cardNumber) {
+              userKey = key;
+              currentBalance = parseFloat(users[key].balance);
+              break;
+            }
+          }
+
+          if (userKey) {
+            // Update the balance
+            const newBalance = currentBalance + addBalance;
+            const userRef = ref(database, `users/${userKey}`);
+            update(userRef, { balance: newBalance }).then(() => {
+              alert('餘額新增成功！');
+              document.getElementById('balanceForm').reset();
+            }).catch((error) => {
+              console.error('餘額新增失敗：', error);
+            });
+          } else {
+            alert('找不到該卡號的使用者！');
+          }
+        } else {
+          alert('找不到使用者資料！');
+        }
+      }).catch((error) => {
+        console.error('資料讀取失敗：', error);
+      });
+    });
+
+    // Handle Form Submission for Querying Balance
+    document.getElementById('queryBalanceForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const cardNumber = document.getElementById('cardNumberQuery').value;
+
+      // Get user data from Firebase
+      const usersRef = ref(database, 'users');
+      get(usersRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const users = snapshot.val();
+          let userFound = false;
+
+          // Find the user by card number
+          for (const key in users) {
+            if (users[key].cardNumber === cardNumber) {
+              userFound = true;
+              const balance = users[key].balance;
+              document.getElementById('balanceResult').innerText = `卡號 ${cardNumber} 的餘額為：${balance}`;
+              break;
+            }
+          }
+
+          if (!userFound) {
+            document.getElementById('balanceResult').innerText = '找不到該卡號的使用者！';
+          }
+        } else {
+          document.getElementById('balanceResult').innerText = '找不到使用者資料！';
+        }
+      }).catch((error) => {
+        console.error('資料讀取失敗：', error);
+      });
+    });
+  </script>
+</body>
+</html>
