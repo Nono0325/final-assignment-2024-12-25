@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>查詢及儲值卡號餘額</title>
+  <!-- 引入Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="text-center">查詢及儲值卡號餘額</h1>
+    <form id="checkBalanceForm">
+      <div class="mb-3">
+        <label for="cardNumber" class="form-label">卡號</label>
+        <input type="text" class="form-control" id="cardNumber" maxlength="11" required>
+      </div>
+      <div id="result" class="mt-3"></div>
+    </form>
+    <form id="topUpForm" class="mt-3" style="display: none;">
+      <div class="mb-3">
+        <label for="topUpAmount" class="form-label">儲值金額</label>
+        <input type="number" class="form-control" id="topUpAmount" required>
+      </div>
+      <button type="submit" class="btn btn-primary">儲值</button>
+    </form>
+  </div>
+
+  <script type="module">
+    // Import Firebase SDKs and Configuration
+    import { ref, get, update, push, set } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+    import { database } from "./firebaseConfig.js";
+
+    // Function to check balance
+    function checkBalance(cardNumber) {
+      const usersRef = ref(database, 'users');
+      get(usersRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const users = snapshot.val();
+          let userFound = false;
+
+          // Find the user by card number
+          for (const key in users) {
+            if (users[key].cardNumber === cardNumber) {
+              userFound = true;
+              const balance = users[key].balance;
+              document.getElementById('result').innerHTML = `
+                <p>卡號 ${cardNumber} 的當下餘額為：${balance}</p>
+              `;
+              document.getElementById('topUpForm').style.display = 'block';
+              break;
+            }
+          }
+
+          if (!userFound) {
+            document.getElementById('result').innerHTML = '找不到該卡號的使用者！';
+            document.getElementById('topUpForm').style.display = 'none';
+          }
+        } else {
+          document.getElementById('result').innerHTML = '找不到使用者資料！';
+          document.getElementById('topUpForm').style.display = 'none';
+        }
+      }).catch((error) => {
+        console.error('資料讀取失敗：', error);
+      });
+    }
+
+    // Handle card number input
+    document.getElementById('cardNumber').addEventListener('input', (event) => {
+      const cardNumber = event.target.value.trim();
+      if (cardNumber.length === 11) {
+        checkBalance(cardNumber);
+      }
+    });
+
+    // Handle top-up form submission
+    document.getElementById('topUpForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const cardNumber = document.getElementById('cardNumber').value.trim();
+      const topUpAmount = parseFloat(document.getElementById('topUpAmount').value);
+
+      const usersRef = ref(database, 'users');
+      get(usersRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const users = snapshot.val();
+          let userKey = null;
+          let currentBalance = 0;
+
+          // Find the user by card number
+          for (const key in users) {
+            if (users[key].cardNumber === cardNumber) {
+              userKey = key;
+              currentBalance = parseFloat(users[key].balance);
+              break;
+            }
+          }
+
+          if (userKey) {
+            // Update the balance
+            const newBalance = currentBalance + topUpAmount;
+            const userRef = ref(database, `users/${userKey}`);
+            update(userRef, { balance: newBalance }).then(() => {
+              // Record the top-up
+              const topUpRef = ref(database, `users/${userKey}/topUpRecords`);
+              const newTopUpRef = push(topUpRef);
+              set(newTopUpRef, {
+                amount: topUpAmount,
+                date: new Date().toISOString()
+              }).then(() => {
+                alert('儲值成功並記錄！');
+                checkBalance(cardNumber); // Update balance display
+                document.getElementById('topUpForm').reset();
+              }).catch((error) => {
+                console.error('儲值記錄失敗：', error);
+              });
+            }).catch((error) => {
+              console.error('儲值失敗：', error);
+            });
+          } else {
+            alert('找不到該卡號的使用者！');
+          }
+        } else {
+          alert('找不到使用者資料！');
+        }
+      }).catch((error) => {
+        console.error('資料讀取失敗：', error);
+      });
+    });
+  </script>
+</body>
+</html>
