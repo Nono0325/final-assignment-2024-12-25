@@ -38,25 +38,9 @@
   <p id="balanceResult"></p>
 
   <script type="module">
-    // Import Firebase SDKs
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-    import { getDatabase, ref, push, set, get, update } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
-
-    // Firebase Configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyATKMAYVCRLjOeX0Npj-VcWdEuKQhy0nRg",
-      authDomain: "final-assignment-4f1de.firebaseapp.com",
-      databaseURL: "https://final-assignment-4f1de-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "final-assignment-4f1de",
-      storageBucket: "final-assignment-4f1de.firebasestorage.app",
-      messagingSenderId: "928317934661",
-      appId: "1:928317934661:web:d2dd3a37c8bade1194272c",
-      measurementId: "G-LTTR4ZE1ZQ"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+    // Import Firebase SDKs and Configuration
+    import { ref, push, set, get, update } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+    import { database } from "./firebaseConfig.js";
 
     // Handle Form Submission for Saving Data
     document.getElementById('dataForm').addEventListener('submit', (event) => {
@@ -108,8 +92,18 @@
             const newBalance = currentBalance + addBalance;
             const userRef = ref(database, `users/${userKey}`);
             update(userRef, { balance: newBalance }).then(() => {
-              alert('餘額新增成功！');
-              document.getElementById('balanceForm').reset();
+              // Record the top-up
+              const topUpRef = ref(database, `users/${userKey}/topUpRecords`);
+              const newTopUpRef = push(topUpRef);
+              set(newTopUpRef, {
+                amount: addBalance,
+                date: new Date().toISOString()
+              }).then(() => {
+                alert('餘額新增成功並記錄！');
+                document.getElementById('balanceForm').reset();
+              }).catch((error) => {
+                console.error('加值記錄失敗：', error);
+              });
             }).catch((error) => {
               console.error('餘額新增失敗：', error);
             });

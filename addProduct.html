@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新增商品</title>
+  <!-- 引入Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="text-center">新增商品</h1>
+    <form id="productForm">
+      <div class="mb-3">
+        <label for="productId" class="form-label">商品序號</label>
+        <input type="text" class="form-control" id="productId" required>
+      </div>
+      <div class="mb-3">
+        <label for="productName" class="form-label">商品名稱</label>
+        <input type="text" class="form-control" id="productName" required>
+      </div>
+      <div class="mb-3">
+        <label for="price" class="form-label">價格</label>
+        <input type="number" class="form-control" id="price" required>
+      </div>
+      <div class="mb-3">
+        <label for="quantity" class="form-label">數量</label>
+        <input type="number" class="form-control" id="quantity" required>
+      </div>
+      <div class="mb-3">
+        <label for="description" class="form-label">介紹</label>
+        <textarea class="form-control" id="description" rows="3" required></textarea>
+      </div>
+      <div class="mb-3">
+        <label for="imageUrl" class="form-label">圖片網址</label>
+        <input type="url" class="form-control" id="imageUrl" required>
+      </div>
+      <button type="submit" class="btn btn-primary">新增商品</button>
+    </form>
+    <div class="text-center mt-3">
+      <a href="shopping.html" class="btn btn-secondary">前往購物中心</a>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import Firebase SDKs and Configuration
+    import { ref, push, set } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+    import { database } from "./firebaseConfig.js";
+
+    // Handle Form Submission for Adding Product
+    document.getElementById('productForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const productId = document.getElementById('productId').value;
+      const productName = document.getElementById('productName').value;
+      const price = parseFloat(document.getElementById('price').value);
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const description = document.getElementById('description').value;
+      const imageUrl = document.getElementById('imageUrl').value;
+
+      // Save product data to Firebase
+      const productsRef = ref(database, 'products');
+      const newProductRef = push(productsRef);
+      set(newProductRef, {
+        productId: productId,
+        productName: productName,
+        price: price,
+        quantity: quantity,
+        description: description,
+        imageUrl: imageUrl
+      }).then(() => {
+        alert('商品新增成功！');
+        document.getElementById('productForm').reset();
+      }).catch((error) => {
+        console.error('商品新增失敗：', error);
+      });
+    });
+  </script>
+</body>
+</html>
