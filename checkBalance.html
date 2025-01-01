@@ -3,63 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>查詢卡號餘額</title>
+  <title>餘額查詢</title>
   <!-- 引入Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
   <div class="container mt-5">
-    <h1 class="text-center">查詢卡號餘額</h1>
+    <h1 class="text-center">餘額查詢</h1>
     <form id="checkBalanceForm">
       <div class="mb-3">
         <label for="cardNumber" class="form-label">卡號</label>
-        <input type="text" class="form-control" id="cardNumber" maxlength="11" required>
+        <input type="text" class="form-control" id="cardNumber" maxlength="11" required pattern="\\d{11}" placeholder="請輸入11位數卡號">
       </div>
       <div id="result" class="mt-3"></div>
     </form>
   </div>
 
   <script type="module">
-    // Import Firebase SDKs and Configuration
     import { ref, get } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
     import { database } from "./firebaseConfig.js";
 
-    // Function to check balance
-    function checkBalance(cardNumber) {
-      const usersRef = ref(database, 'users');
-      get(usersRef).then((snapshot) => {
+    // 查詢餘額
+    async function checkBalance(cardNumber) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '<p class="text-info">正在查詢中...</p>';
+
+      try {
+        const usersRef = ref(database, 'users');
+        const snapshot = await get(usersRef);
+
         if (snapshot.exists()) {
           const users = snapshot.val();
           let userFound = false;
 
-          // Find the user by card number
+          // 搜尋用戶資料
           for (const key in users) {
             if (users[key].cardNumber === cardNumber) {
               userFound = true;
               const balance = users[key].balance;
-              document.getElementById('result').innerHTML = `
-                <p>卡號 ${cardNumber} 的當下餘額為：${balance}</p>
+              resultDiv.innerHTML = `
+                <p>卡號 <strong>${cardNumber}</strong> 的當下餘額為：<strong>${balance}</strong></p>
               `;
               break;
             }
           }
 
           if (!userFound) {
-            document.getElementById('result').innerHTML = '找不到該卡號的使用者！';
+            resultDiv.innerHTML = '<p class="text-danger">找不到該卡號的使用者！</p>';
           }
         } else {
-          document.getElementById('result').innerHTML = '找不到使用者資料！';
+          resultDiv.innerHTML = '<p class="text-warning">找不到使用者資料！</p>';
         }
-      }).catch((error) => {
+      } catch (error) {
         console.error('資料讀取失敗：', error);
-      });
+        resultDiv.innerHTML = '<p class="text-danger">資料查詢失敗，請稍後再試！</p>';
+      }
     }
 
-    // Handle card number input
+    // 處理卡號輸入
     document.getElementById('cardNumber').addEventListener('input', (event) => {
       const cardNumber = event.target.value.trim();
-      if (cardNumber.length === 11) {
+
+      // 僅在輸入完整卡號時進行查詢
+      if (/^\d{11}$/.test(cardNumber)) {
         checkBalance(cardNumber);
+      } else {
+        document.getElementById('result').innerHTML = '';
       }
     });
   </script>
