@@ -3,18 +3,77 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>商品管理</title>
+  <title>後臺管理</title>
+  <!-- 引入Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
   <div class="container mt-5">
-    <h1 class="text-center">商品管理</h1>
-    <div class="text-center mt-3">
-      <button class="btn btn-primary" onclick="showModal()">新增商品</button>
-      <a href="shopping.html" class="btn btn-secondary">前往購物中心</a>
-    </div>
-    <div id="productList" class="mt-4">
-      <!-- 商品列表將顯示在這裡 -->
+    <h1 class="text-center">後臺管理</h1>
+    <!-- 工作列 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">管理面板</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" href="index.html">首頁</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="shopping.html">購物中心</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="checkBalance.html">餘額查詢</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="checkAndTopUpBalance.html">購物金加值</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="checkTicket.html">購票驗證</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="checkRecords.html">消費紀錄查詢</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <ul class="nav nav-tabs" id="adminTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab" aria-controls="products" aria-selected="true">商品管理</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab" aria-controls="users" aria-selected="false">用戶管理</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders" type="button" role="tab" aria-controls="orders" aria-selected="false">訂單管理</button>
+      </li>
+    </ul>
+    <div class="tab-content" id="adminTabsContent">
+      <!-- 商品管理 -->
+      <div class="tab-pane fade show active" id="products" role="tabpanel" aria-labelledby="products-tab">
+        <div class="text-center mt-3">
+          <button class="btn btn-primary" onclick="showProductModal()">新增商品</button>
+        </div>
+        <div id="productList" class="mt-4">
+          <!-- 商品列表將顯示在這裡 -->
+        </div>
+      </div>
+      <!-- 用戶管理 -->
+      <div class="tab-pane fade" id="users" role="tabpanel" aria-labelledby="users-tab">
+        <div id="userList" class="mt-4">
+          <!-- 用戶列表將顯示在這裡 -->
+        </div>
+      </div>
+      <!-- 訂單管理 -->
+      <div class="tab-pane fade" id="orders" role="tabpanel" aria-labelledby="orders-tab">
+        <div id="orderList" class="mt-4">
+          <!-- 訂單列表將顯示在這裡 -->
+        </div>
+      </div>
     </div>
   </div>
 
@@ -65,6 +124,8 @@
     import { database } from "./firebaseConfig.js";
 
     const productList = document.getElementById('productList');
+    const userList = document.getElementById('userList');
+    const orderList = document.getElementById('orderList');
 
     // 顯示商品列表
     function displayProducts(products) {
@@ -79,12 +140,51 @@
               <p class="card-text">數量: ${product.quantity}</p>
               <p class="card-text">描述: ${product.description}</p>
               <p class="card-text">圖片: <img src="${product.imageUrl}" alt="${product.productName}" style="width: 100px;"></p>
-              <button class="btn btn-warning" onclick="showModal('${key}', ${JSON.stringify(product)})">修改</button>
+              <button class="btn btn-warning" onclick="showProductModal('${key}', ${JSON.stringify(product)})">修改</button>
               <button class="btn btn-danger" onclick="deleteProduct('${key}')">刪除</button>
             </div>
           </div>
         `;
         productList.insertAdjacentHTML('beforeend', productCard);
+      }
+    }
+
+    // 顯示用戶列表
+    function displayUsers(users) {
+      userList.innerHTML = '';
+      for (const key in users) {
+        const user = users[key];
+        const userCard = `
+          <div class="card mb-3">
+            <div class="card-body">
+              <h5 class="card-title">用戶名: ${user.username}</h5>
+              <p class="card-text">卡號: ${user.cardNumber}</p>
+              <p class="card-text">餘額: ${user.balance}</p>
+              <button class="btn btn-danger" onclick="deleteUser('${key}')">刪除</button>
+            </div>
+          </div>
+        `;
+        userList.insertAdjacentHTML('beforeend', userCard);
+      }
+    }
+
+    // 顯示訂單列表
+    function displayOrders(orders) {
+      orderList.innerHTML = '';
+      for (const key in orders) {
+        const order = orders[key];
+        const orderCard = `
+          <div class="card mb-3">
+            <div class="card-body">
+              <h5 class="card-title">訂單ID: ${key}</h5>
+              <p class="card-text">用戶ID: ${order.userId}</p>
+              <p class="card-text">商品ID: ${order.productId}</p>
+              <p class="card-text">金額: ${order.amount}</p>
+              <p class="card-text">日期: ${order.date}</p>
+            </div>
+          </div>
+        `;
+        orderList.insertAdjacentHTML('beforeend', orderCard);
       }
     }
 
@@ -98,8 +198,28 @@
       }
     }).catch(console.error);
 
-    // 顯示模態框（新增或修改）
-    window.showModal = function(key = '', product = {}) {
+    // 從 Firebase 獲取用戶
+    const usersRef = ref(database, 'users');
+    get(usersRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        displayUsers(snapshot.val());
+      } else {
+        console.log('No users available');
+      }
+    }).catch(console.error);
+
+    // 從 Firebase 獲取訂單
+    const ordersRef = ref(database, 'orders');
+    get(ordersRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        displayOrders(snapshot.val());
+      } else {
+        console.log('No orders available');
+      }
+    }).catch(console.error);
+
+    // 顯示商品模態框（新增或修改）
+    window.showProductModal = function(key = '', product = {}) {
       document.getElementById('productModalLabel').textContent = key ? '修改商品' : '新增商品';
       document.getElementById('productKey').value = key;
       document.getElementById('productId').value = product.productId || '';
@@ -113,7 +233,7 @@
       productModal.show();
     };
 
-    // 提交表單
+    // 提交商品表單
     document.getElementById('productForm').addEventListener('submit', (event) => {
       event.preventDefault();
       const key = document.getElementById('productKey').value;
@@ -130,14 +250,12 @@
         // 修改商品
         update(ref(database, `products/${key}`), productData).then(() => {
           alert('商品修改成功！');
-          productList.innerHTML = '';
           location.reload();
         }).catch(console.error);
       } else {
         // 新增商品
         push(productsRef, productData).then(() => {
           alert('商品新增成功！');
-          productList.innerHTML = '';
           location.reload();
         }).catch(console.error);
       }
@@ -151,6 +269,16 @@
       if (confirm('確定要刪除這個商品嗎？')) {
         remove(ref(database, `products/${key}`)).then(() => {
           alert('商品刪除成功！');
+          location.reload();
+        }).catch(console.error);
+      }
+    };
+
+    // 刪除用戶
+    window.deleteUser = function(key) {
+      if (confirm('確定要刪除這個用戶嗎？')) {
+        remove(ref(database, `users/${key}`)).then(() => {
+          alert('用戶刪除成功！');
           location.reload();
         }).catch(console.error);
       }

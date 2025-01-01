@@ -6,6 +6,12 @@
     <title>購物中心</title>
     <!-- 引入Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .card img {
+            height: 200px;
+            object-fit: cover;
+        }
+    </style>
 </head>
 <body>
     <!-- 頁首 -->
@@ -37,27 +43,27 @@
     <!-- 引入Bootstrap的JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module">
-        // Import Firebase SDKs and Configuration
-        import { ref, get, update } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+        // 引入Firebase SDK和配置
+        import { ref, get, update, push, set } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
         import { database } from "./firebaseConfig.js";
 
-        // Function to display products
+        // 顯示商品的函數
         function displayProducts(products) {
             const productList = document.getElementById('productList');
-            productList.innerHTML = ''; // Clear existing products
+            productList.innerHTML = ''; // 清空現有商品
 
             for (const key in products) {
                 const product = products[key];
                 const productCard = `
                     <div class="col-md-4 mb-4">
-                        <div class="card">
+                        <div class="card h-100">
                             <img src="${product.imageUrl}" class="card-img-top" alt="${product.productName}">
                             <div class="card-body">
                                 <h5 class="card-title">${product.productName}</h5>
                                 <p class="card-text">${product.description}</p>
                                 <p class="card-text">價格: $${product.price}</p>
                                 <p class="card-text">剩餘數量: ${product.quantity}</p>
-                                <button class="btn btn-primary" onclick="showPurchaseModal('${key}', ${product.price})">購買</button>
+                                <button class="btn btn-primary" onclick="showPurchaseModal('${key}', ${product.price}, ${product.quantity})">購買</button>
                             </div>
                         </div>
                     </div>
@@ -66,7 +72,7 @@
             }
         }
 
-        // Fetch products from Firebase
+        // 從Firebase獲取商品
         const productsRef = ref(database, 'products');
         get(productsRef).then((snapshot) => {
             if (snapshot.exists()) {
@@ -79,8 +85,8 @@
             console.error('Error fetching products:', error);
         });
 
-        // Function to show purchase modal
-        window.showPurchaseModal = function(productId, productPrice) {
+        // 顯示購買模態框的函數
+        window.showPurchaseModal = function(productId, productPrice, productQuantity) {
             const modalHtml = `
                 <div class="modal fade" id="purchaseModal" tabindex="-1" aria-labelledby="purchaseModalLabel" aria-hidden="true">
                     <div class="modal-dialog">
@@ -109,14 +115,14 @@
             document.getElementById('purchaseForm').addEventListener('submit', (event) => {
                 event.preventDefault();
                 const cardNumber = document.getElementById('cardNumber').value;
-                purchaseProduct(productId, productPrice, cardNumber);
+                purchaseProduct(productId, productPrice, productQuantity, cardNumber);
                 purchaseModal.hide();
                 document.getElementById('purchaseModal').remove();
             });
         };
 
-        // Function to handle product purchase
-        function purchaseProduct(productId, productPrice, cardNumber) {
+        // 處理商品購買的函數
+        function purchaseProduct(productId, productPrice, productQuantity, cardNumber) {
             const usersRef = ref(database, 'users');
             get(usersRef).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -124,7 +130,7 @@
                     let userKey = null;
                     let currentBalance = 0;
 
-                    // Find the user by card number
+                    // 根據卡號查找用戶
                     for (const key in users) {
                         if (users[key].cardNumber === cardNumber) {
                             userKey = key;
@@ -135,11 +141,30 @@
 
                     if (userKey) {
                         if (currentBalance >= productPrice) {
-                            // Update the balance
+                            // 更新餘額
                             const newBalance = currentBalance - productPrice;
                             const userRef = ref(database, `users/${userKey}`);
                             update(userRef, { balance: newBalance }).then(() => {
-                                alert('購買成功！');
+                                // 記錄購買
+                                const purchaseRef = ref(database, `users/${userKey}/purchaseRecords`);
+                                const newPurchaseRef = push(purchaseRef);
+                                set(newPurchaseRef, {
+                                    productId: productId,
+                                    amount: productPrice,
+                                    date: new Date().toISOString()
+                                }).then(() => {
+                                    // 更新商品數量
+                                    const newQuantity = productQuantity - 1;
+                                    const productRef = ref(database, `products/${productId}`);
+                                    update(productRef, { quantity: newQuantity }).then(() => {
+                                        alert('購買成功並更新庫存！');
+                                        location.reload(); // 刷新頁面以更新商品列表
+                                    }).catch((error) => {
+                                        console.error('庫存更新失敗：', error);
+                                    });
+                                }).catch((error) => {
+                                    console.error('購買記錄失敗：', error);
+                                });
                             }).catch((error) => {
                                 console.error('購買失敗：', error);
                             });
@@ -157,7 +182,7 @@
             });
         }
 
-        // Function to search product by ID
+        // 根據ID搜尋商品的函數
         window.searchProduct = function() {
             const searchProductId = document.getElementById('searchProductId').value.trim();
             if (!searchProductId) return;

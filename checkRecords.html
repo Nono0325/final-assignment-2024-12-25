@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>消費紀錄查詢</title>
+  <!-- 引入Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- 引入Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- 引入日期適配器 -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="text-center">消費紀錄查詢</h1>
+    <form id="checkRecordsForm">
+      <div class="mb-3">
+        <label for="cardNumber" class="form-label">卡號</label>
+        <input type="text" class="form-control" id="cardNumber" maxlength="11" required>
+      </div>
+      <div id="result" class="mt-3"></div>
+    </form>
+
+    <!-- 進度條顯示餘額 -->
+    <div id="balanceProgress" class="mt-5" style="display:none;">
+      <h4>當前餘額</h4>
+      <div class="progress">
+        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { ref, get } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+    import { database } from "./firebaseConfig.js";
+
+    function checkRecords(cardNumber) {
+      const usersRef = ref(database, 'users');
+      get(usersRef)
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const users = snapshot.val();
+            let userFound = false;
+
+            for (const key in users) {
+              if (users[key].cardNumber === cardNumber) {
+                userFound = true;
+                const topUpRecords = users[key].topUpRecords || {};
+                const purchaseRecords = users[key].purchaseRecords || {};
+
+                let resultHtml = `<h3>卡號 ${cardNumber} 的紀錄</h3>`;
+                resultHtml += '<h4>儲值紀錄</h4><ul>';
+                for (const recordKey in topUpRecords) {
+                  const record = topUpRecords[recordKey];
+                  resultHtml += `<li>金額: ${record.amount}, 日期: ${record.date}</li>`;
+                }
+                resultHtml += '</ul><h4>消費紀錄</h4><ul>';
+                let totalSpent = 0; // 用來計算總消費金額
+                for (const recordKey in purchaseRecords) {
+                  const record = purchaseRecords[recordKey];
+                  resultHtml += `<li>商品ID: ${record.productId}, 金額: ${record.amount}, 日期: ${record.date}</li>`;
+                  totalSpent += record.amount;
+                }
+                resultHtml += '</ul>';
+
+                // 計算餘額
+                const totalTopUp = Object.values(topUpRecords).reduce((sum, record) => sum + record.amount, 0);
+                const balance = totalTopUp - totalSpent;
+
+                resultHtml += `<h4>總儲值金額: ${totalTopUp} 元</h4>`;
+                resultHtml += `<h4>總消費金額: ${totalSpent} 元</h4>`;
+                resultHtml += `<h4>當前餘額: ${balance} 元</h4>`;
+                document.getElementById('result').innerHTML = resultHtml;
+
+                // 顯示進度條
+                const progressBar = document.getElementById('progressBar');
+                const maxBalance = 1000; // 假設最大餘額為 1000 元
+                const percentage = Math.min((balance / maxBalance) * 100, 100); // 計算進度條百分比，並限制為最大 100%
+                
+                document.getElementById('balanceProgress').style.display = 'block';
+                progressBar.style.width = `${percentage}%`;
+                progressBar.setAttribute('aria-valuenow', percentage);
+                progressBar.innerText = `${Math.round(percentage)}%`;
+
+                break;
+              }
+            }
+
+            if (!userFound) {
+              document.getElementById('result').innerHTML = '找不到該卡號的使用者！';
+              document.getElementById('balanceProgress').style.display = 'none';
+            }
+          } else {
+            document.getElementById('result').innerHTML = '找不到使用者資料！';
+            document.getElementById('balanceProgress').style.display = 'none';
+          }
+        })
+        .catch((error) => {
+          console.error('資料讀取失敗：', error);
+          document.getElementById('balanceProgress').style.display = 'none';
+        });
+    }
+
+    document.getElementById('cardNumber').addEventListener('input', (event) => {
+      const cardNumber = event.target.value.trim();
+      if (cardNumber.length === 11) {
+        checkRecords(cardNumber);
+      }
+    });
+  </script>
+</body>
+</html>
