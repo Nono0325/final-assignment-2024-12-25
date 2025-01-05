@@ -101,6 +101,10 @@
                                         <label for="cardNumber" class="form-label">卡號</label>
                                         <input type="text" class="form-control" id="cardNumber" required>
                                     </div>
+                                    <div class="mb-3">
+                                        <label for="purchaseQuantity" class="form-label">購買數量</label>
+                                        <input type="number" class="form-control" id="purchaseQuantity" min="1" max="${productQuantity}" value="1" required>
+                                    </div>
                                     <button type="submit" class="btn btn-primary">確認購買</button>
                                 </form>
                             </div>
@@ -115,14 +119,15 @@
             document.getElementById('purchaseForm').addEventListener('submit', (event) => {
                 event.preventDefault();
                 const cardNumber = document.getElementById('cardNumber').value;
-                purchaseProduct(productId, productPrice, productQuantity, cardNumber);
+                const purchaseQuantity = parseInt(document.getElementById('purchaseQuantity').value);
+                purchaseProduct(productId, productPrice, productQuantity, cardNumber, purchaseQuantity);
                 purchaseModal.hide();
                 document.getElementById('purchaseModal').remove();
             });
         };
 
         // 處理商品購買的函數
-        function purchaseProduct(productId, productPrice, productQuantity, cardNumber) {
+        function purchaseProduct(productId, productPrice, productQuantity, cardNumber, purchaseQuantity) {
             const usersRef = ref(database, 'users');
             get(usersRef).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -140,9 +145,10 @@
                     }
 
                     if (userKey) {
-                        if (currentBalance >= productPrice) {
+                        const totalCost = productPrice * purchaseQuantity;
+                        if (currentBalance >= totalCost) {
                             // 更新餘額
-                            const newBalance = currentBalance - productPrice;
+                            const newBalance = currentBalance - totalCost;
                             const userRef = ref(database, `users/${userKey}`);
                             update(userRef, { balance: newBalance }).then(() => {
                                 // 記錄購買
@@ -150,36 +156,51 @@
                                 const newPurchaseRef = push(purchaseRef);
                                 set(newPurchaseRef, {
                                     productId: productId,
-                                    amount: productPrice,
+                                    amount: totalCost,
+                                    quantity: purchaseQuantity,
                                     date: new Date().toISOString()
                                 }).then(() => {
                                     // 更新商品數量
-                                    const newQuantity = productQuantity - 1;
+                                    const newQuantity = productQuantity - purchaseQuantity;
                                     const productRef = ref(database, `products/${productId}`);
                                     update(productRef, { quantity: newQuantity }).then(() => {
                                         alert('購買成功並更新庫存！');
+                                        speak(`購買成功，消費金額為 ${totalCost} 元，並更新庫存！`);
                                         location.reload(); // 刷新頁面以更新商品列表
                                     }).catch((error) => {
                                         console.error('庫存更新失敗：', error);
+                                        speak('庫存更新失敗');
                                     });
                                 }).catch((error) => {
                                     console.error('購買記錄失敗：', error);
+                                    speak('購買記錄失敗');
                                 });
                             }).catch((error) => {
                                 console.error('購買失敗：', error);
+                                speak('購買失敗');
                             });
                         } else {
                             alert('餘額不足！');
+                            speak('餘額不足');
                         }
                     } else {
                         alert('找不到該卡號的使用者！');
+                        speak('找不到該卡號的使用者');
                     }
                 } else {
                     alert('找不到使用者資料！');
+                    speak('找不到使用者資料');
                 }
             }).catch((error) => {
                 console.error('資料讀取失敗：', error);
+                speak('資料讀取失敗');
             });
+        }
+
+        // 語音播報函數
+        function speak(text) {
+            const msg = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(msg);
         }
 
         // 根據ID搜尋商品的函數
