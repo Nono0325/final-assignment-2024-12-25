@@ -17,14 +17,18 @@
     <!-- 頁首 -->
     <header class="bg-primary text-white text-center py-3">
         <h1>夢幻遊樂園購物中心</h1>
-        <a href="index.html" class="btn btn-light mt-3">返回主網頁</a>
+        <div class="btn-group mt-3" role="group">
+            <button class="btn btn-light" onclick="setLanguage('zh')">中文</button>
+            <button class="btn btn-light" onclick="setLanguage('en')">English</button>
+            <button class="btn btn-light" onclick="window.location.href='index.html'" data-lang="backToHome">回到主頁</button>
+        </div>
     </header>
 
     <!-- 內容 -->
     <section class="py-5">
         <div class="container text-center">
-            <h2>歡迎來到購物中心</h2>
-            <p>在這裡您可以找到各種紀念品和商品。</p>
+            <h2 id="welcomeMessage">歡迎來到購物中心</h2>
+            <p id="description">在這裡您可以找到各種紀念品和商品。</p>
             <div class="mb-4">
                 <input type="text" id="searchProductId" class="form-control" placeholder="輸入商品序號搜尋">
                 <button class="btn btn-primary mt-2" onclick="searchProduct()">搜尋</button>
@@ -47,30 +51,67 @@
         import { ref, get, update, push, set } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
         import { database } from "./firebaseConfig.js";
 
-        // 顯示商品的函數
-        function displayProducts(products) {
-            const productList = document.getElementById('productList');
-            productList.innerHTML = ''; // 清空現有商品
+    // 更新商品結構函數
+    async function updateProducts() {
+        const productsRef = ref(database, 'products');
+        const snapshot = await get(productsRef);
 
+        if (snapshot.exists()) {
+            const products = snapshot.val();
+
+            const updates = {};
             for (const key in products) {
                 const product = products[key];
-                const productCard = `
-                    <div class="col-md-4 mb-4">
-                        <div class="card h-100">
-                            <img src="${product.imageUrl}" class="card-img-top" alt="${product.productName}">
-                            <div class="card-body">
-                                <h5 class="card-title">${product.productName}</h5>
-                                <p class="card-text">${product.description}</p>
-                                <p class="card-text">價格: $${product.price}</p>
-                                <p class="card-text">剩餘數量: ${product.quantity}</p>
-                                <button class="btn btn-primary" onclick="showPurchaseModal('${key}', ${product.price}, ${product.quantity})">購買</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                productList.insertAdjacentHTML('beforeend', productCard);
+
+                // 修改結構，添加多語言支持
+                updates[`products/${key}/productName`] = {
+                    zh: product.productName,
+                    en: product.productName
+                };
+
+                updates[`products/${key}/description`] = {
+                    zh: product.description,
+                    en: product.description
+                };
             }
+
+            // 更新資料庫
+            await update(ref(database), updates);
+            console.log("商品資料更新完成！");
+        } else {
+            console.log("未找到商品資料！");
         }
+    }
+
+    // 調用更新函數（僅需執行一次，確保不重複修改資料）
+    updateProducts().catch(console.error);
+
+        function displayProducts(products, language = 'zh') {
+    const productList = document.getElementById('productList');
+    productList.innerHTML = ''; // 清空現有商品
+
+    for (const key in products) {
+        const product = products[key];
+        const productCard = `
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <img src="${product.imageUrl}" class="card-img-top" alt="${product.productName[language]}">
+                    <div class="card-body">
+                        <h5 class="card-title">${product.productName[language]}</h5>
+                        <p class="card-text">${product.description[language]}</p>
+                        <p class="card-text">價格: $${product.price}</p>
+                        <p class="card-text">剩餘數量: ${product.quantity}</p>
+                        <button class="btn btn-primary" onclick="showPurchaseModal('${key}', ${product.price}, ${product.quantity})">
+                            ${language === 'zh' ? '購買' : 'Purchase'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        productList.insertAdjacentHTML('beforeend', productCard);
+    }
+}
+
 
         // 從Firebase獲取商品
         const productsRef = ref(database, 'products');
@@ -233,6 +274,55 @@
                 console.error('Error fetching products:', error);
             });
         };
+
+        // 切換語言的函數
+        window.setLanguage = function(language) {
+    const translations = {
+        zh: {
+            welcomeMessage: '歡迎來到購物中心',
+            description: '在這裡您可以找到各種紀念品和商品。',
+            searchPlaceholder: '輸入商品序號搜尋',
+            searchButton: '搜尋',
+            backToHome: '回到主頁'
+        },
+        en: {
+            welcomeMessage: 'Welcome to the Shopping Center',
+            description: 'Here you can find various souvenirs and products.',
+            searchPlaceholder: 'Enter product ID to search',
+            searchButton: 'Search',
+            backToHome: 'Back to Home'
+        }
+    };
+
+    const elements = {
+        welcomeMessage: document.getElementById('welcomeMessage'),
+        description: document.getElementById('description'),
+        searchProductId: document.getElementById('searchProductId'),
+        searchButton: document.querySelector('button[onclick="searchProduct()"]'),
+        backToHome: document.querySelector('button[data-lang="backToHome"]')
+    };
+
+    const translation = translations[language];
+
+    elements.welcomeMessage.textContent = translation.welcomeMessage;
+    elements.description.textContent = translation.description;
+    elements.searchProductId.placeholder = translation.searchPlaceholder;
+    elements.searchButton.textContent = translation.searchButton;
+    elements.backToHome.textContent = translation.backToHome;
+
+    // 重新渲染商品清單
+    get(productsRef).then((snapshot) => {
+        if (snapshot.exists()) {
+            const products = snapshot.val();
+            displayProducts(products, language);
+        } else {
+            console.log('No products available');
+        }
+    }).catch((error) => {
+        console.error('Error fetching products:', error);
+    });
+};
+
     </script>
 </body>
 </html>
