@@ -1,19 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>餘額查詢</title>
   <!-- 引入Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #343a40;
+    }
+    .form-label {
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
   <div class="container mt-5">
-    <h1 class="text-center">餘額查詢</h1>
+    <h1 class="text-center" data-lang="title">餘額查詢</h1>
+    <div class="text-center mb-4">
+      <div class="btn-group" role="group">
+        <button class="btn btn-light" onclick="setLanguage('zh')">中文</button>
+        <button class="btn btn-light" onclick="setLanguage('en')">English</button>
+        <button class="btn btn-primary" onclick="window.location.href='index.html'" data-lang="backToHome">回到主頁</button>
+      </div>
+    </div>
     <form id="checkBalanceForm">
       <div class="mb-3">
-        <label for="cardNumber" class="form-label">卡號</label>
-        <input type="text" class="form-control" id="cardNumber" maxlength="11" required pattern="\\d{11}" placeholder="請輸入11位數卡號">
+        <label for="cardNumber" class="form-label" data-lang="cardNumber">卡號</label>
+        <input type="text" class="form-control" id="cardNumber" maxlength="11" required pattern="\\d{11}" data-lang-placeholder="cardNumberPlaceholder" placeholder="請輸入11位數卡號">
       </div>
       <div id="result" class="mt-3"></div>
     </form>
@@ -26,7 +52,7 @@
     // 查詢餘額
     async function checkBalance(cardNumber) {
       const resultDiv = document.getElementById('result');
-      resultDiv.innerHTML = '<p class="text-info">正在查詢中...</p>';
+      resultDiv.innerHTML = '<p class="text-info" data-lang="checking">正在查詢中...</p>';
 
       try {
         const usersRef = ref(database, 'users');
@@ -42,21 +68,21 @@
               userFound = true;
               const balance = users[key].balance;
               resultDiv.innerHTML = `
-                <p>卡號 <strong>${cardNumber}</strong> 的當下餘額為：<strong>${balance}</strong></p>
+                <p data-lang="balanceResult">卡號 <strong>${cardNumber}</strong> 的當下餘額為：<strong>${balance}</strong></p>
               `;
               break;
             }
           }
 
           if (!userFound) {
-            resultDiv.innerHTML = '<p class="text-danger">找不到該卡號的使用者！</p>';
+            resultDiv.innerHTML = '<p class="text-danger" data-lang="userNotFound">找不到該卡號的使用者！</p>';
           }
         } else {
-          resultDiv.innerHTML = '<p class="text-warning">找不到使用者資料！</p>';
+          resultDiv.innerHTML = '<p class="text-warning" data-lang="noUserData">找不到使用者資料！</p>';
         }
       } catch (error) {
         console.error('資料讀取失敗：', error);
-        resultDiv.innerHTML = '<p class="text-danger">資料查詢失敗，請稍後再試！</p>';
+        resultDiv.innerHTML = '<p class="text-danger" data-lang="fetchError">資料查詢失敗，請稍後再試！</p>';
       }
     }
 
@@ -71,6 +97,55 @@
         document.getElementById('result').innerHTML = '';
       }
     });
+
+    const translations = {
+      en: {
+        title: "Check Balance",
+        cardNumber: "Card Number",
+        cardNumberPlaceholder: "Please enter 11-digit card number",
+        checking: "Checking...",
+        balanceResult: (cardNumber, balance) => `The  card number <strong>${cardNumber}</strong> current balance is: <strong>${balance}</strong>`,
+        userNotFound: "User with this card number not found!",
+        noUserData: "No user data found!",
+        fetchError: "Error fetching data, please try again later!",
+        backToHome: "Back to Home"
+      },
+      zh: {
+        title: "餘額查詢",
+        cardNumber: "卡號",
+        cardNumberPlaceholder: "請輸入11位數卡號",
+        checking: "正在查詢中...",
+        balanceResult: (cardNumber, balance) => `卡號 <strong>${cardNumber}</strong> 的當下餘額為：<strong>${balance}</strong>`,
+        userNotFound: "找不到該卡號的使用者！",
+        noUserData: "找不到使用者資料！",
+        fetchError: "資料查詢失敗，請稍後再試！",
+        backToHome: "回到主頁"
+      }
+    };
+
+    function setLanguage(lang) {
+      document.querySelectorAll('[data-lang]').forEach(element => {
+        const key = element.getAttribute('data-lang');
+        if (typeof translations[lang][key] === 'function') {
+          const cardNumber = document.getElementById('cardNumber').value.trim();
+          const balance = document.querySelector('[data-lang="balanceResult"] strong:last-child')?.textContent || '';
+          element.innerHTML = translations[lang][key](cardNumber, balance);
+        } else {
+          element.innerHTML = translations[lang][key];
+        }
+      });
+      document.querySelectorAll('[data-lang-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-lang-placeholder');
+        element.placeholder = translations[lang][key];
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setLanguage('zh');
+    });
+
+    // Ensure language buttons work correctly
+    window.setLanguage = setLanguage;
   </script>
 </body>
 </html>

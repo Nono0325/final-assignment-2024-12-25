@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,13 +10,45 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- 引入日期適配器 -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #343a40;
+    }
+    .form-label {
+      font-weight: bold;
+    }
+    .progress {
+      height: 30px;
+    }
+    .progress-bar {
+      font-size: 1rem;
+    }
+  </style>
 </head>
 <body>
   <div class="container mt-5">
-    <h1 class="text-center">消費紀錄查詢</h1>
+    <h1 class="text-center" data-lang="title">消費紀錄查詢</h1>
+    <div class="text-center mb-4">
+      <div class="btn-group" role="group">
+        <button class="btn btn-light" onclick="setLanguage('zh')">中文</button>
+        <button class="btn btn-light" onclick="setLanguage('en')">English</button>
+        <button class="btn btn-primary" onclick="window.location.href='index.html'" data-lang="backToHome">回到主頁</button>
+      </div>
+    </div>
     <form id="checkRecordsForm">
       <div class="mb-3">
-        <label for="cardNumber" class="form-label">卡號</label>
+        <label for="cardNumber" class="form-label" data-lang="cardNumber">卡號</label>
         <input type="text" class="form-control" id="cardNumber" maxlength="11" required>
       </div>
       <div id="result" class="mt-3"></div>
@@ -24,7 +56,6 @@
 
     <!-- 進度條顯示餘額 -->
     <div id="balanceProgress" class="mt-5" style="display:none;">
-      <h4>當前餘額</h4>
       <div class="progress">
         <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
       </div>
@@ -34,7 +65,7 @@
   <script type="module">
     import { ref, get } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
     import { database } from "./firebaseConfig.js";
-
+  
     function checkRecords(cardNumber) {
       const usersRef = ref(database, 'users');
       get(usersRef)
@@ -42,57 +73,55 @@
           if (snapshot.exists()) {
             const users = snapshot.val();
             let userFound = false;
-
+  
             for (const key in users) {
               if (users[key].cardNumber === cardNumber) {
                 userFound = true;
                 const topUpRecords = users[key].topUpRecords || {};
                 const purchaseRecords = users[key].purchaseRecords || {};
-
-                let resultHtml = `<h3>卡號 ${cardNumber} 的紀錄</h3>`;
-                resultHtml += '<h4>儲值紀錄</h4><ul>';
+  
+                let resultHtml = `<h3 data-lang="recordTitle" data-card-number="${cardNumber}">卡號 ${cardNumber} 的紀錄</h3>`;
+                resultHtml += '<h4 data-lang="topUpRecords">儲值紀錄</h4><ul class="list-group">';
                 for (const recordKey in topUpRecords) {
                   const record = topUpRecords[recordKey];
-                  resultHtml += `<li>金額: ${record.amount}, 日期: ${record.date}</li>`;
+                  resultHtml += `<li class="list-group-item" data-lang="topUpRecordItem" data-amount="${record.amount}" data-date="${record.date}">金額: ${record.amount}, 日期: ${record.date}</li>`;
                 }
-                resultHtml += '</ul><h4>消費紀錄</h4><ul>';
-                let totalSpent = 0; // 用來計算總消費金額
+                resultHtml += '</ul><h4 data-lang="purchaseRecords">消費紀錄</h4><ul class="list-group">';
+                let totalSpent = 0;
                 for (const recordKey in purchaseRecords) {
                   const record = purchaseRecords[recordKey];
-                  resultHtml += `<li>商品ID: ${record.productId}, 金額: ${record.amount}, 日期: ${record.date}</li>`;
+                  resultHtml += `<li class="list-group-item" data-lang="purchaseRecordItem" data-product-id="${record.productId}" data-amount="${record.amount}" data-date="${record.date}">商品ID: ${record.productId}, 金額: ${record.amount}, 日期: ${record.date}</li>`;
                   totalSpent += record.amount;
                 }
                 resultHtml += '</ul>';
-
-                // 計算餘額
+  
                 const totalTopUp = Object.values(topUpRecords).reduce((sum, record) => sum + record.amount, 0);
                 const balance = totalTopUp - totalSpent;
-
-                resultHtml += `<h4>總儲值金額: ${totalTopUp} 元</h4>`;
-                resultHtml += `<h4>總消費金額: ${totalSpent} 元</h4>`;
-                resultHtml += `<h4>當前餘額: ${balance} 元</h4>`;
+  
+                resultHtml += `<h4 data-lang="totalTopUp" data-total-top-up="${totalTopUp}">總儲值金額: ${totalTopUp} 元</h4>`;
+                resultHtml += `<h4 data-lang="totalSpent" data-total-spent="${totalSpent}">總消費金額: ${totalSpent} 元</h4>`;
+                resultHtml += `<h4 data-lang="currentBalance" data-balance="${balance}">當前餘額: ${balance} 元</h4>`;
                 document.getElementById('result').innerHTML = resultHtml;
-
-                // 顯示進度條
+  
                 const progressBar = document.getElementById('progressBar');
-                const maxBalance = 1000; // 假設最大餘額為 1000 元
-                const percentage = Math.min((balance / maxBalance) * 100, 100); // 計算進度條百分比，並限制為最大 100%
-                
+                const maxBalance = 100000000;
+                const percentage = Math.min((balance / maxBalance) * 100, 100);
+  
                 document.getElementById('balanceProgress').style.display = 'block';
                 progressBar.style.width = `${percentage}%`;
                 progressBar.setAttribute('aria-valuenow', percentage);
                 progressBar.innerText = `${Math.round(percentage)}%`;
-
+  
                 break;
               }
             }
-
+  
             if (!userFound) {
-              document.getElementById('result').innerHTML = '找不到該卡號的使用者！';
+              document.getElementById('result').innerHTML = '<p class="text-danger" data-lang="userNotFound">找不到該卡號的使用者！</p>';
               document.getElementById('balanceProgress').style.display = 'none';
             }
           } else {
-            document.getElementById('result').innerHTML = '找不到使用者資料！';
+            document.getElementById('result').innerHTML = '<p class="text-warning" data-lang="noUserData">找不到使用者資料！</p>';
             document.getElementById('balanceProgress').style.display = 'none';
           }
         })
@@ -106,8 +135,78 @@
       const cardNumber = event.target.value.trim();
       if (cardNumber.length === 11) {
         checkRecords(cardNumber);
+      } else {
+        document.getElementById('result').innerHTML = '';
+        document.getElementById('balanceProgress').style.display = 'none';
       }
     });
-  </script>
+
+    document.getElementById('cardNumber').addEventListener('input', (event) => {
+    const cardNumber = event.target.value.trim();
+    if (cardNumber.length === 11) {
+      checkRecords(cardNumber);
+    } else {
+      document.getElementById('result').innerHTML = '';
+      document.getElementById('balanceProgress').style.display = 'none';
+    }
+  });
+
+  const translations = {
+    en: {
+      title: "Check Records",
+      cardNumber: "Card Number",
+      recordTitle: "Records for card number {cardNumber}",
+      topUpRecords: "Top-Up Records",
+      purchaseRecords: "Purchase Records",
+      totalTopUp: "Total Top-Up Amount: {totalTopUp} units",
+      totalSpent: "Total Spent Amount: {totalSpent} units",
+      currentBalance: "Current Balance: {balance} units",
+      userNotFound: "User with this card number not found!",
+      noUserData: "No user data found!",
+      backToHome: "Back to Home",
+      topUpRecordItem: "Amount: {amount}, Date: {date}",
+      purchaseRecordItem: "Product ID: {productId}, Amount: {amount}, Date: {date}"
+    },
+    zh: {
+      title: "消費紀錄查詢",
+      cardNumber: "卡號",
+      recordTitle: "卡號 {cardNumber} 的紀錄",
+      topUpRecords: "儲值紀錄",
+      purchaseRecords: "消費紀錄",
+      totalTopUp: "總儲值金額: {totalTopUp} 元",
+      totalSpent: "總消費金額: {totalSpent} 元",
+      currentBalance: "當前餘額: {balance} 元",
+      userNotFound: "找不到該卡號的使用者！",
+      noUserData: "找不到使用者資料！",
+      backToHome: "回到主頁",
+      topUpRecordItem: "金額: {amount}, 日期: {date}",
+      purchaseRecordItem: "商品ID: {productId}, 金額: {amount}, 日期: {date}"
+    }
+  };
+
+  function setLanguage(lang) {
+    document.querySelectorAll('[data-lang]').forEach(element => {
+      const key = element.getAttribute('data-lang');
+      let translation = translations[lang][key];
+
+      if (!translation) return;
+
+      Object.keys(element.dataset).forEach(dataKey => {
+        if (dataKey !== 'lang') {
+          const value = element.dataset[dataKey];
+          translation = translation.replace(`{${dataKey}}`, value || '');
+        }
+      });
+
+      element.innerHTML = translation;
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setLanguage('zh');
+  });
+
+  window.setLanguage = setLanguage;
+</script>
 </body>
 </html>

@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>夢幻遊樂園網站</title>
     <!-- 引入Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+<style>
         /* 頁面整體樣式 */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -63,6 +64,8 @@
 
         .card img {
             border-radius: 10px 10px 0 0;
+            height: 200px; /* 設定圖片高度 */
+            object-fit: cover; /* 確保圖片不變形 */
         }
 
         .card-body {
@@ -93,12 +96,13 @@
         }
 
         #about .carousel-caption {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+            position: static;
+            transform: none;
+            color: #333;
+            text-shadow: none;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
         }
 
         /* 文字區域 */
@@ -145,7 +149,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <img src="https://via.placeholder.com/30" alt="Logo">
+                <img src="logo.png" alt="Logo">
                 <span data-lang="parkName">夢幻遊樂園</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -155,8 +159,8 @@
                 <ul class="navbar-nav mx-auto">
                     <li class="nav-item"><a class="nav-link" href="#about" data-lang="aboutUs">關於我們</a></li>
                     <li class="nav-item"><a class="nav-link" href="#attractions" data-lang="attractions">設施介紹</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#events" data-lang="events">最新活動</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#tickets" data-lang="tickets">線上購票</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#events" data-lang="events">卡片資訊查詢</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#tickets" data-lang="tickets">線上購物</a></li>
                     <li class="nav-item"><a class="nav-link" href="#map" data-lang="map">導覽地圖</a></li>
                     <li class="nav-item"><a class="nav-link" href="shopping.html" data-lang="shopping">購物中心</a></li>
                 </ul>
@@ -232,23 +236,56 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <img src="cars.png" class="card-img-top" alt="設施4">
+                        <div class="card-body">
+                            <h5 class="card-title" data-lang="bumperCars">碰碰車</h5>
+                            <p class="card-text" data-lang="bumperCarsDesc">享受刺激的碰碰車體驗。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <img src="circus.png" class="card-img-top" alt="設施5">
+                        <div class="card-body">
+                            <h5 class="card-title" data-lang="circus">馬戲團</h5>
+                            <p class="card-text" data-lang="circusDesc">觀看精彩的馬戲表演。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <img src="freefall.png" class="card-img-top" alt="設施6">
+                        <div class="card-body">
+                            <h5 class="card-title" data-lang="freeFall">自由落體</h5>
+                            <p class="card-text" data-lang="freeFallDesc">體驗自由落體的驚險刺激。</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- 最新活動 -->
+    <!-- 卡片資訊查詢 -->
     <section id="events" class="py-5 bg-light">
         <div class="container text-center">
-            <h2 data-lang="events">最新活動</h2>
-            <p data-lang="eventsDesc">了解我們最新的活動和特別節目。</p>
+            <h2 data-lang="events">卡片資訊查詢</h2>
+            <p data-lang="eventsDesc">查詢您的卡片資訊和餘額。</p>
+            <div class="d-flex justify-content-center mt-4">
+                <a href="checkRecords.html" class="btn btn-primary mx-2" data-lang="checkRecords">消費紀錄查詢</a>
+                <a href="checkBalance.html" class="btn btn-primary mx-2" data-lang="checkBalance">餘額查詢</a>
+                <a href="checkAndTopUpBalance.html" class="btn btn-primary mx-2" data-lang="topUp">加值</a>
+            </div>
         </div>
     </section>
 
-    <!-- 線上購票 -->
+    <!-- 線上購物 -->
     <section id="tickets" class="py-5">
         <div class="container text-center">
-            <h2 data-lang="tickets">線上購票</h2>
-            <p data-lang="ticketsDesc">立即購買門票，享受便捷的線上購票服務。</p>
+            <h2 data-lang="tickets">線上購物</h2>
+            <p data-lang="ticketsDesc">立即購買門票及商品，享受便捷的線上購物服務。</p>
+            <a href="shopping.html" class="btn btn-primary mt-3" data-lang="shopNow">立即購物</a>
         </div>
     </section>
 
@@ -257,6 +294,7 @@
         <div class="container text-center">
             <h2 data-lang="map">導覽地圖</h2>
             <p data-lang="mapDesc">查看遊樂園的導覽地圖，方便您的遊玩。</p>
+            <img src="map.png" alt="導覽地圖" class="img-fluid mt-3">
         </div>
     </section>
 
@@ -268,10 +306,9 @@
     </section>
 
     <!-- 頁尾 -->
-    <footer>
+    <footer style="text-align: center;">
         <p>&copy; 2024 夢幻遊樂園. 保留所有權利。</p>
     </footer>
-
     <!-- 引入Bootstrap的JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -289,13 +326,23 @@
                 carouselDesc: "A classic ride perfect for children.",
                 ferrisWheel: "Ferris Wheel",
                 ferrisWheelDesc: "Enjoy the beautiful view of the amusement park and have a romantic time.",
-                events: "Latest Events",
-                eventsDesc: "Learn about our latest events and special programs.",
-                tickets: "Online Tickets",
+                bumperCars: "Bumper Cars",
+                bumperCarsDesc: "Enjoy the thrilling bumper car experience.",
+                circus: "Circus",
+                circusDesc: "Watch exciting circus performances.",
+                freeFall: "Free Fall",
+                freeFallDesc: "Experience the thrill of free fall.",
+                events: "Card Information Inquiry",
+                eventsDesc: "Check your card information and balance.",
+                checkRecords: "Check Purchase Records",
+                checkBalance: "Check Balance",
+                topUp: "Top Up",
+                tickets: "Online Shopping",
                 ticketsDesc: "Buy tickets now and enjoy the convenience of online ticketing.",
                 map: "Map",
                 mapDesc: "Check out the amusement park map for your convenience.",
-                shopping: "Shopping Center"
+                shopping: "Shopping Center",
+                shopNow: "Shop Now"
             },
             zh: {
                 welcome: "歡迎來到夢幻遊樂園",
@@ -310,13 +357,23 @@
                 carouselDesc: "適合孩子們的經典遊樂設施。",
                 ferrisWheel: "摩天輪",
                 ferrisWheelDesc: "欣賞遊樂園的美景，享受浪漫時光。",
-                events: "最新活動",
-                eventsDesc: "了解我們最新的活動和特別節目。",
-                tickets: "線上購票",
+                bumperCars: "碰碰車",
+                bumperCarsDesc: "享受刺激的碰碰車體驗。",
+                circus: "馬戲團",
+                circusDesc: "觀看精彩的馬戲表演。",
+                freeFall: "自由落體",
+                freeFallDesc: "體驗自由落體的驚險刺激。",
+                events: "卡片資訊查詢",
+                eventsDesc: "查詢您的卡片資訊和餘額。",
+                checkRecords: "消費紀錄查詢",
+                checkBalance: "餘額查詢",
+                topUp: "加值",
+                tickets: "線上購物",
                 ticketsDesc: "立即購買門票，享受便捷的線上購票服務。",
                 map: "導覽地圖",
                 mapDesc: "查看遊樂園的導覽地圖，方便您的遊玩。",
-                shopping: "購物中心"
+                shopping: "購物中心",
+                shopNow: "立即購物"
             }
         };
 
