@@ -17,6 +17,7 @@
     <!-- 頁首 -->
     <header class="bg-primary text-white text-center py-3">
         <h1>夢幻遊樂園購物中心</h1>
+        <div id="navbarContainer"></div>
         <div class="btn-group mt-3" role="group">
             <button class="btn btn-light" onclick="setLanguage('zh')">中文</button>
             <button class="btn btn-light" onclick="setLanguage('en')">English</button>
@@ -30,7 +31,7 @@
             <h2 id="welcomeMessage">歡迎來到購物中心</h2>
             <p id="description">在這裡您可以找到各種紀念品和商品。</p>
             <div class="mb-4">
-                <input type="text" id="searchProductId" class="form-control" placeholder="輸入商品序號搜尋">
+                <input type="text" id="searchProductName" class="form-control" placeholder="輸入商品名稱搜尋">
                 <button class="btn btn-primary mt-2" onclick="searchProduct()">搜尋</button>
             </div>
             <div id="productList" class="row mt-4">
@@ -51,67 +52,30 @@
         import { ref, get, update, push, set } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
         import { database } from "./firebaseConfig.js";
 
-    // 更新商品結構函數
-    async function updateProducts() {
-        const productsRef = ref(database, 'products');
-        const snapshot = await get(productsRef);
+        // 顯示商品的函數
+        function displayProducts(products) {
+            const productList = document.getElementById('productList');
+            productList.innerHTML = ''; // 清空現有商品
 
-        if (snapshot.exists()) {
-            const products = snapshot.val();
-
-            const updates = {};
             for (const key in products) {
                 const product = products[key];
-
-                // 修改結構，添加多語言支持
-                updates[`products/${key}/productName`] = {
-                    zh: product.productName,
-                    en: product.productName
-                };
-
-                updates[`products/${key}/description`] = {
-                    zh: product.description,
-                    en: product.description
-                };
-            }
-
-            // 更新資料庫
-            await update(ref(database), updates);
-            console.log("商品資料更新完成！");
-        } else {
-            console.log("未找到商品資料！");
-        }
-    }
-
-    // 調用更新函數（僅需執行一次，確保不重複修改資料）
-    updateProducts().catch(console.error);
-
-        function displayProducts(products, language = 'zh') {
-    const productList = document.getElementById('productList');
-    productList.innerHTML = ''; // 清空現有商品
-
-    for (const key in products) {
-        const product = products[key];
-        const productCard = `
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <img src="${product.imageUrl}" class="card-img-top" alt="${product.productName[language]}">
-                    <div class="card-body">
-                        <h5 class="card-title">${product.productName[language]}</h5>
-                        <p class="card-text">${product.description[language]}</p>
-                        <p class="card-text">價格: $${product.price}</p>
-                        <p class="card-text">剩餘數量: ${product.quantity}</p>
-                        <button class="btn btn-primary" onclick="showPurchaseModal('${key}', ${product.price}, ${product.quantity})">
-                            ${language === 'zh' ? '購買' : 'Purchase'}
-                        </button>
+                const productCard = `
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <img src="${product.imageUrl}" class="card-img-top" alt="${product.productName}">
+                            <div class="card-body">
+                                <h5 class="card-title">${product.productName}</h5>
+                                <p class="card-text">${product.description}</p>
+                                <p class="card-text">價格: $${product.price}</p>
+                                <p class="card-text">剩餘數量: ${product.quantity}</p>
+                                <button class="btn btn-primary" onclick="showPurchaseModal('${key}', ${product.price}, ${product.quantity}, '${product.productName}')">購買</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        `;
-        productList.insertAdjacentHTML('beforeend', productCard);
-    }
-}
-
+                `;
+                productList.insertAdjacentHTML('beforeend', productCard);
+            }
+        }
 
         // 從Firebase獲取商品
         const productsRef = ref(database, 'products');
@@ -127,13 +91,13 @@
         });
 
         // 顯示購買模態框的函數
-        window.showPurchaseModal = function(productId, productPrice, productQuantity) {
+        window.showPurchaseModal = function(productId, productPrice, productQuantity, productName) {
             const modalHtml = `
                 <div class="modal fade" id="purchaseModal" tabindex="-1" aria-labelledby="purchaseModalLabel" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title" id="purchaseModalLabel">購買商品</h5>
+                                <h5 class="modal-title" id="purchaseModalLabel">購買商品 - ${productName}</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
@@ -220,6 +184,15 @@
                                 console.error('購買失敗：', error);
                                 speak('購買失敗');
                             });
+
+                            // 如果購買的是門票，更新用戶的門票狀態
+                            if (productId == '00000000002') {
+                                update(userRef, { hasTicket: 'yes' }).then(() => {
+                                    console.log('門票狀態更新成功！');
+                                }).catch((error) => {
+                                    console.error('門票狀態更新失敗：', error);
+                                });
+                            }
                         } else {
                             alert('餘額不足！');
                             speak('餘額不足');
@@ -244,10 +217,10 @@
             window.speechSynthesis.speak(msg);
         }
 
-        // 根據ID搜尋商品的函數
+        // 根據名稱搜尋商品的函數
         window.searchProduct = function() {
-            const searchProductId = document.getElementById('searchProductId').value.trim();
-            if (!searchProductId) return;
+            const searchProductName = document.getElementById('searchProductName').value.trim().toLowerCase();
+            if (!searchProductName) return;
 
             const productsRef = ref(database, 'products');
             get(productsRef).then((snapshot) => {
@@ -256,16 +229,15 @@
                     const filteredProducts = {};
 
                     for (const key in products) {
-                        if (products[key].productId === searchProductId) {
+                        if (products[key].productName.toLowerCase().includes(searchProductName)) {
                             filteredProducts[key] = products[key];
-                            break;
                         }
                     }
 
                     if (Object.keys(filteredProducts).length > 0) {
                         displayProducts(filteredProducts);
                     } else {
-                        alert('找不到該商品序號的商品！');
+                        alert('找不到該商品名稱的商品！');
                     }
                 } else {
                     console.log('No products available');
@@ -277,52 +249,72 @@
 
         // 切換語言的函數
         window.setLanguage = function(language) {
-    const translations = {
-        zh: {
-            welcomeMessage: '歡迎來到購物中心',
-            description: '在這裡您可以找到各種紀念品和商品。',
-            searchPlaceholder: '輸入商品序號搜尋',
-            searchButton: '搜尋',
-            backToHome: '回到主頁'
-        },
-        en: {
-            welcomeMessage: 'Welcome to the Shopping Center',
-            description: 'Here you can find various souvenirs and products.',
-            searchPlaceholder: 'Enter product ID to search',
-            searchButton: 'Search',
-            backToHome: 'Back to Home'
-        }
-    };
+            const translations = {
+                zh: {
+                    welcomeMessage: '歡迎來到購物中心',
+                    description: '在這裡您可以找到各種紀念品和商品。',
+                    searchPlaceholder: '輸入商品名稱搜尋',
+                    searchButton: '搜尋',
+                    purchaseButton: '購買',
+                    cardNumberLabel: '卡號',
+                    purchaseQuantityLabel: '購買數量',
+                    confirmPurchaseButton: '確認購買',
+                    successMessage: '購買成功並更新庫存！',
+                    balanceInsufficient: '餘額不足！',
+                    userNotFound: '找不到該卡號的使用者！',
+                    noUserData: '找不到使用者資料！',
+                    fetchError: '資料讀取失敗：',
+                    stockUpdateError: '庫存更新失敗：',
+                    purchaseRecordError: '購買記錄失敗：',
+                    purchaseError: '購買失敗：',
+                    noProducts: '找不到該商品名稱的商品！',
+                    backToHome: '回到主頁'
+                },
+                en: {
+                    welcomeMessage: 'Welcome to the Shopping Center',
+                    description: 'Here you can find various souvenirs and products.',
+                    searchPlaceholder: 'Enter product name to search',
+                    searchButton: 'Search',
+                    purchaseButton: 'Purchase',
+                    cardNumberLabel: 'Card Number',
+                    purchaseQuantityLabel: 'Purchase Quantity',
+                    confirmPurchaseButton: 'Confirm Purchase',
+                    successMessage: 'Purchase successful and stock updated!',
+                    balanceInsufficient: 'Insufficient balance!',
+                    userNotFound: 'User with this card number not found!',
+                    noUserData: 'No user data found!',
+                    fetchError: 'Error fetching data:',
+                    stockUpdateError: 'Stock update failed:',
+                    purchaseRecordError: 'Purchase record failed:',
+                    purchaseError: 'Purchase failed:',
+                    noProducts: 'No products found with this name!',
+                    backToHome: 'Back to Home'
+                }
+            };
 
-    const elements = {
-        welcomeMessage: document.getElementById('welcomeMessage'),
-        description: document.getElementById('description'),
-        searchProductId: document.getElementById('searchProductId'),
-        searchButton: document.querySelector('button[onclick="searchProduct()"]'),
-        backToHome: document.querySelector('button[data-lang="backToHome"]')
-    };
+            const elements = {
+                welcomeMessage: document.getElementById('welcomeMessage'),
+                description: document.getElementById('description'),
+                searchProductName: document.getElementById('searchProductName'),
+                searchButton: document.querySelector('button[onclick="searchProduct()"]'),
+                backToHome: document.querySelector('button[data-lang="backToHome"]')
+            };
 
-    const translation = translations[language];
+            const translation = translations[language];
 
-    elements.welcomeMessage.textContent = translation.welcomeMessage;
-    elements.description.textContent = translation.description;
-    elements.searchProductId.placeholder = translation.searchPlaceholder;
-    elements.searchButton.textContent = translation.searchButton;
-    elements.backToHome.textContent = translation.backToHome;
+            elements.welcomeMessage.textContent = translation.welcomeMessage;
+            elements.description.textContent = translation.description;
+            elements.searchProductName.placeholder = translation.searchPlaceholder;
+            elements.searchButton.textContent = translation.searchButton;
+            elements.backToHome.textContent = translation.backToHome;
+        };
 
-    // 重新渲染商品清單
-    get(productsRef).then((snapshot) => {
-        if (snapshot.exists()) {
-            const products = snapshot.val();
-            displayProducts(products, language);
-        } else {
-            console.log('No products available');
-        }
-    }).catch((error) => {
-        console.error('Error fetching products:', error);
-    });
-};
-
+        // 引入共用的工作列
+        fetch('navbar.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('navbarContainer').innerHTML = data;
+            });
     </script>
 </body>
 </html>
